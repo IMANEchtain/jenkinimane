@@ -4,6 +4,7 @@ pipeline {
     stages {
         stage {
             steps {
+            dir(\\C:\Users\ichtaini\AppData\Roaming\Python\Python38\Scripts)
                 sh "py -m pip show ansible"
                 
             }
