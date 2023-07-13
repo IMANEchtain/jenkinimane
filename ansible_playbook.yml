@@ -1,0 +1,74 @@
+- name: Create Destination folder
+  file: path={{ ansible_user_home}}/{{ env_name }} state=directory
+
+- name: Copy war to target machine
+  copy:
+    src: "{{ path_to_war }}"
+    dest: "{{ ansible_user_home}}/{{ env_name }}/{{ deployment_name }}"
+
+    
+- name: Build image
+  copy:
+    src: "{{C:/users/ichtaini/desktop}}"
+  shell: >
+    docker build --build-arg {{ VARIBLAEi=vari.war }} -t image_name:tag . -f Dockerfile.dockerfile
+
+#- name: Create build directory
+ # file:
+  #   path: \\wsl.localhost\docker-desktop-data\data\docker\volumes\jenkins_home\_data\workspace\testtest
+   #  state: directory
+    # owner: root
+     #group: root
+     #mode: '0755'
+- name: cpy Dockerfile.dockerfile
+  copy:
+     sr: C:\Users\ichtaini\Desktop
+     dest: \\wsl.localhost\docker-desktop-data\data\docker\volumes\jenkins_home\_data\workspace\testtest
+     # owner: root
+     #group: root
+     #mode: '0644'
+
+- name: build container
+  docker_image: 
+    name: jboss_container
+    build:
+       path: \\wsl.localhost\docker-desktop-data\data\docker\volumes\jenkins_home\_data\workspace\testtest
+       source: build
+    state: present
+
+#- name: 
+
+- name: remove docker container {{ container_name }}
+  shell: >
+    docker rm -f {{ container_name }}
+  register: stop_out
+  failed_when: stop_out.rc != 0 and stop_out.rc != 1
+
+- name: Generate containter
+   #shell: >
+    #   docker run -d -p 8080:8080 -p 9990:9990 --name {{ container_name }} -v {{ansible_user_home}}/: -v {{ daggerok/jboss-eap-7.2 }}:/
+  command: ["docker", "run",]
+   # docker run -it -d --name {{ container_name }} -v {{ ansible_user_home}}/{{ env_name }}:/hpsweb -v {{ jboss_shared }}:/pwctemp -e ORACLE_PDB={{ var_oracle_pdb }} -e ORACLE_USER={{ var_oracle_pdb }}  -e ORACLE_HOST={{ var_oracle_host }} -e ORACLE_PORT={{ var_oracle_port }}  -e ORACLE_SID={{ var_oracle_sid }} -e ORACLE_PASSWORD={{ var_oracle_password }} -p {{ offset|int + 8443 }}:8443 -p {{ offset|int + 9990 }}:9990 -p {{ offset|int + 8080 }}:8080 -p {{ offset|int + 9993 }}:9993 {{ image_name }}
+      
+- name: check Deployment
+  block:
+    - name: wait service to be ready
+      wait_for:
+        port: "{{ 9990 + offset|int }}"
+        host: "{{ ansible_host }}"
+        connect_timeout: 3
+        delay: 3
+        timeout: 400
+
+    - name: Check that the v3_31-web exists
+      stat: path={{ ansible_user_home}}/{{ env_name }}/v3_31-web.war
+      register: stat_result_server
+
+    - name: deploy Server
+      shell: >
+        curl -k --digest -u {{ console_user }}:{{ console_password }} -L -D - "https://{{ ansible_host }}:{{ 9993 + offset|int }}/management" --header "Content-Type: application/json"
+        -d '{"operation" : "composite", "address" : [], "steps" : [{"operation" : "add", "address" : {"deployment" : "v3_31-web.war"}, "content" : [{"path" : "/hpsweb/v3_31-web.war","archive" : true}]},
+        {"operation" : "deploy", "address" : {"deployment" : "v3_31-web.war"}}],"json.pretty":1}'
+      args:
+        warn: false
+      when: stat_result_server.stat.exists
