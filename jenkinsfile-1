@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     stages {
-        stage {
+        stage{
             steps {
             
                 sh "py -m pip show ansible"
